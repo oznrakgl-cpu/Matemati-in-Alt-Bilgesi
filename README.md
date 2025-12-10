@@ -1,1 +1,1 @@
-# Matematikin-Alt-Bilgesi
+# Matematigin-Altı-Bilgesi
