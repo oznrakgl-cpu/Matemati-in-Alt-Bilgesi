@@ -1,0 +1,587 @@
+
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Matematik Dünyasının Altı Bilgesi</title>
+<style>
+  :root{--accent:#2b6cb0;--bg:#f7f7f8;--card:#ffffff}
+  body{font-family:Arial,Helvetica,sans-serif;background:linear-gradient(180deg,#eef2f6,#f7f7f8);margin:0;color:#222}
+  header{background:var(--accent);color:#fff;padding:18px 20px}
+  .container{max-width:980px;margin:18px auto;padding:16px}
+  .card{background:var(--card);border-radius:10px;box-shadow:0 6px 18px rgba(0,0,0,0.08);padding:18px;margin-bottom:14px}
+  h1,h2,h3{margin:6px 0}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  .col{flex:1 1 240px;min-width:220px}
+  .npc-portrait{width:120px;height:120px;border-radius:8px;background:#eee;display:flex;align-items:center;justify-content:center;font-weight:bold;color:#666}
+  button{background:var(--accent);color:#fff;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+  button.secondary{background:#6b7280}
+  .choices button{display:block;width:100%;text-align:left;margin:6px 0;padding:10px}
+  .progress{height:18px;background:#eee;border-radius:12px;overflow:hidden}
+  .progress .bar{height:100%;background:linear-gradient(90deg,#ffd166,#ef476f);width:0%}
+  .badge{display:inline-block;padding:6px 8px;border-radius:8px;background:#fff;border:1px solid #e6e6e6;margin:4px}
+  input[type="number"], input[type="text"]{padding:8px;border-radius:8px;border:1px solid #ccc;width:100%}
+  .hidden{display:none}
+  footer{font-size:13px;text-align:center;color:#666;padding:12px}
+  .hint{font-size:13px;color:#2b6cb0;margin-top:8px}
+  .leaderboard{max-height:200px;overflow:auto}
+  .map{display:flex;gap:8px;flex-wrap:wrap}
+  .map .node{padding:10px;border-radius:10px;background:#fff;border:1px solid #e6e6e6;cursor:pointer;min-width:140px;text-align:center}
+  .locked{opacity:0.4;filter:grayscale(0.4);cursor:not-allowed}
+  .dialog{background:#f1f7ff;padding:10px;border-radius:8px;margin:8px 0}
+</style>
+</head>
+<body>
+<header>
+  <div style="max-width:980px;margin:0 auto;display:flex;align-items:center;justify-content:space-between">
+    <div>
+      <h1>Matematik Dünyasının Altı Bilgesi</h1>
+      <div style="font-size:14px">Zamanın bilgeliğini keşfet. Her bir bilgeden öğren, görevleri tamamla, rozetleri topla.</div>
+    </div>
+    <div style="text-align:right">
+      <div id="score">Puan: 0</div>
+      <div id="level">Seviye: 1</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+  <div id="main-screen" class="card">
+    <h2>Açılış</h2>
+    <p>Hoş geldin! Haritadan bir matematikçi seç ve onun bölümünü tamamla. Her bölümde 2–3 mini görev var. Bölümleri sırasıyla açmak için ilerle.</p>
+    <div class="card">
+      <h3>Harita</h3>
+      <div class="map" id="map"></div>
+    </div>
+    <div style="margin-top:10px">
+      <button id="daily-btn">Günlük Görev: Bonus soru al</button>
+      <button id="show-leaderboard" class="secondary">Liderlik Tablosu</button>
+    </div>
+  </div>
+
+  <div id="chapter-screen" class="card hidden">
+    <button id="back-to-map" class="secondary">← Haritaya Dön</button>
+    <div class="row" style="margin-top:12px">
+      <div class="col" style="min-width:240px">
+        <div class="npc-portrait" id="npc-portrait">NPC</div>
+        <h3 id="npc-name"></h3>
+        <div id="npc-intro" class="dialog"></div>
+        <div id="badges-earned"><strong>Alınan Rozetler:</strong></div>
+      </div>
+      <div class="col">
+        <div id="progress-wrap">
+          <div class="progress"><div class="bar" id="progress-bar"></div></div>
+          <div style="margin-top:8px">Bölüm ilerlemesi: <span id="chapter-progress-text">0/0</span></div>
+        </div>
+
+        <div id="task-area" style="margin-top:12px"></div>
+        <div style="margin-top:12px">
+          <button id="next-task" class="secondary hidden">Sonraki Görev →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="final-screen" class="card hidden">
+    <h2>Grand Challenge — Son Mücadele</h2>
+    <p>Tüm matematikçilerden karma sorular. Başarıyla bitirene özel "Matematik Üstadı" rozeti verilecek.</p>
+    <div id="final-area"></div>
+  </div>
+
+  <div id="result-screen" class="card hidden">
+    <h2>Oyun Sonu</h2>
+    <div id="result-summary"></div>
+    <div style="margin-top:12px">
+      <input id="player-name" placeholder="İsmini yaz (liderlik tablosuna ekle)"/>
+      <button id="save-score">Skoru Kaydet</button>
+    </div>
+  </div>
+
+  <div id="leaderboard-screen" class="card hidden">
+    <h2>Liderlik Tablosu</h2>
+    <div class="leaderboard card" id="leaderboard-list"></div>
+    <button id="close-leaderboard" class="secondary">Kapat</button>
+  </div>
+
+</div>
+
+<footer>
+  <div>Oyun prototipi — Eğitim amaçlı. Her bölüm kısa bilgi içerir.</div>
+</footer>
+
+<script>
+/* Game data and logic */
+const chapters = [
+  {id:'thales', name:'Thales', era:'Antik Yunan', npcIntro:'Thales: Geometri ve ölçme hakkında temel fikirler. Benimle benzer üçgenleri ve açı hesaplamalarını keşfet!', tasks:[]},
+  {id:'pyth', name:'Pisagor', era:'Antik Yunan', npcIntro:'Pisagor: Doğanın düzenini sayıların içinde gördüm. Dik üçgenleri çözmeye hazır mısın?', tasks:[]},
+  {id:'euclid', name:'Öklid', era:'Antik Yunan', npcIntro:'Öklid: Aksiyomlardan başlayan yapı. Temel geometrik fikirleri anla ve uygula.', tasks:[]},
+  {id:'hypatia', name:'Hypatia', era:'İskenderiye', npcIntro:'Hypatia: Mantık ve sayılar. Problemleri mantıkla çözecek misin?', tasks:[]},
+  {id:'al', name:'Harezmi', era:'Bağdat', npcIntro:'Harezmi: Denklemler ve algoritmalar. Adım adım çözmeyi öğren.', tasks:[]},
+  {id:'fibo', name:'Fibonacci', era:'Ortaçağ', npcIntro:'Fibonacci: Diziler ve doğanın oranları. Diziyi tamamla ve altın oranı keşfet.', tasks:[]}
+];
+
+let state = {
+  score: 0,
+  level: 1,
+  currentChapter: null,
+  currentTaskIndex: 0,
+  chapterProgress: 0,
+  badges: {},
+  completedChapters: 0
+};
+
+// Helper: init tasks
+function initTasks(){
+  chapters.forEach(ch=>{
+    if(ch.id==='thales'){
+      ch.tasks = [
+        {type:'mc', difficulty:'easy', prompt:'Bir uçtan diğerine paralel çizgiler arasında benzer üçgenler oluşur. Aşağıdakilerden hangisi benzer üçgenlere örnektir?', options:['İki üçgenin açıları eşit','Aynı alan','Aynı çevre','Kenar uzunlukları eşit'], answer:0, hint:'Benzerlik açılarla ilgilidir.'},
+        {type:'mc', difficulty:'medium', prompt:'Bir açı 30°, diğer açı 60°. Bu iki açıya sahip üçgenlerin hangi özelliği doğrudur?', options:['Tüm kenarlar eşit','İki kenar eşit','Benzer üçgenler oluşturur','Alanları eşittir'], answer:2, hint:'Açı eşitliği benzerlik oluşturur.'}
+      ];
+    } else if(ch.id==='pyth'){
+      ch.tasks = [
+        {type:'input', difficulty:'easy', prompt:'Bir dik üçgende dik kenarlar 3 ve 4 ise hipotenüs kaçtır? (tam sayı gir)', answer:5, hint:'3-4-5 üçgenini hatırla.'},
+        {type:'mc', difficulty:'hard', prompt:'Bir dik üçgende iki kısa kenar a ve b ise hipotenüs c ise hangisi doğrudur?', options:['a^2 + b^2 = c','a + b = c^2','a^2 + b^2 = c^2','(a+b)^2 = c^2'], answer:2, hint:'Pisagor bağıntısını kullan.'}
+      ];
+    } else if(ch.id==='euclid'){
+      ch.tasks = [
+        {type:'match', difficulty:'medium', prompt:'Öklid\'in bazı temel kavramlarını eşleştir: (1) Nokta (2) Doğru (3) Düzlem', pairs:[['Tek bir konum','Doğru üzerinde sonsuz nokta'],['İki uçlu sonsuz','Sonsuz geniş yüzey'],['Sonsuz küçük işaret','İki uçlu sonsuz çizgi']], mapping:[0,2,1], hint:'Nokta en basit kavramdır.'},
+        {type:'mc', difficulty:'hard', prompt:'Öklidci geometri hangi aksiyoma dayanmaz?', options:['Bir doğru üzerinde iki nokta vardır','Bütün dik üçgenlerin alanı eşittir','Bir noktadan geçen sonsuz doğru vardır','Bir çember çizilebilir'], answer:1, hint:'Aksiyomlar basit doğru kabul edilen önermelerdir.'}
+      ];
+    } else if(ch.id==='hypatia'){
+      ch.tasks = [
+        {type:'mc', difficulty:'easy', prompt:'Mantıkta "Tüm A, B\'dir" önermesi doğruysa, "Bazı A, B değildir" önermesi nedir?', options:['Kesinlikle doğru','Kesinlikle yanlış','Bilaist','Belirsiz'], answer:1, hint:'Tüm A,B ise bazıları B olmadığını söylemek çelişkidir.'},
+        {type:'logic', difficulty:'medium', prompt:'"Eğer yağmur yağarsa ıslanırım. Bugün ıslanmıyorum. Yağmur yağdı mı?" (Evet/Hayır/Belirsiz)', answer:'Hayır', hint:'Modus tollens mantığı.'}
+      ];
+    } else if(ch.id==='al'){
+      ch.tasks = [
+        {type:'input', difficulty:'easy', prompt:'x + 7 = 12 ise x kaçtır?', answer:5, hint:'Basit denklem çöz.'},
+        {type:'mc', difficulty:'medium', prompt:'Bir algoritma ne işe yarar?', options:['Rastgele sonuç üretir','Adım adım problem çözer','Sadece matematikte kullanılır','Sabit bir sayı döndürür'], answer:1, hint:'Algoritma adım adım talimat demektir.'}
+      ];
+    } else if(ch.id==='fibo'){
+      ch.tasks = [
+        {type:'series', difficulty:'easy', prompt:'Fibonacci dizisi: 1, 1, 2, 3, 5, __ . Boşluğa gelmesi gereken sayı nedir?', answer:8, hint:'Her terim öncekilerin toplamıdır.'},
+        {type:'mc', difficulty:'hard', prompt:'Altın oranın yaklaşık değeri hangisidir?', options:['1.618','2.414','3.142','1.414'], answer:0, hint:'Phi ile gösterilir (~1.618).'}
+      ];
+    }
+  });
+}
+initTasks();
+
+/* UI build: map nodes */
+const mapEl = document.getElementById('map');
+function buildMap(){
+  chapters.forEach((ch,i)=>{
+    const node = document.createElement('div');
+    node.className = 'node';
+    node.id = 'node-'+ch.id;
+    node.innerHTML = `<strong>${ch.name}</strong><div style="font-size:12px">${ch.era}</div><div style="margin-top:8px" class="badge" id="badge-${ch.id}">Kilidi Açılmadı</div>`;
+    node.addEventListener('click', ()=> openChapter(ch));
+    mapEl.appendChild(node);
+    updateNode(ch);
+  });
+}
+function updateNode(ch){
+  const node = document.getElementById('node-'+ch.id);
+  const badge = document.getElementById('badge-'+ch.id);
+  const unlocked = isUnlocked(ch);
+  node.classList.toggle('locked', !unlocked);
+  badge.textContent = unlocked ? (state.badges[ch.id] ? state.badges[ch.id] : 'Rozet Yok') : 'Kilidi Açılmadı';
+}
+function isUnlocked(ch){
+  // sequential unlock: first chapter unlocked, next unlocked when previous completed
+  const index = chapters.findIndex(c=>c.id===ch.id);
+  if(index===0) return true;
+  const prev = chapters[index-1];
+  return !!state.badges[prev.id];
+}
+
+buildMap();
+
+function openChapter(ch){
+  if(!isUnlocked(ch)) { alert('Önce bir önceki bölümü tamamlamalısın.'); return; }
+  state.currentChapter = ch;
+  state.currentTaskIndex = 0;
+  document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('chapter-screen').classList.remove('hidden');
+  document.getElementById('npc-portrait').textContent = ch.name[0];
+  document.getElementById('npc-name').textContent = ch.name;
+  document.getElementById('npc-intro').textContent = ch.npcIntro;
+  renderBadges();
+  renderTask();
+  updateProgressBar();
+}
+
+document.getElementById('back-to-map').addEventListener('click', ()=>{
+  document.getElementById('chapter-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+  saveState();
+});
+
+/* Task rendering and evaluation */
+function renderBadges(){
+  const wrap = document.getElementById('badges-earned');
+  wrap.innerHTML = '<strong>Alınan Rozetler:</strong>';
+  for(const b in state.badges){
+    const sp = document.createElement('span');
+    sp.className = 'badge';
+    sp.textContent = state.badges[b];
+    wrap.appendChild(sp);
+  }
+}
+function renderTask(){
+  const area = document.getElementById('task-area');
+  area.innerHTML = '';
+  const ch = state.currentChapter;
+  const task = ch.tasks[state.currentTaskIndex];
+  if(!task){ area.innerHTML = '<div>Tüm görevler tamamlandı. Bölüm sonuna ilerlemek için "Bölümü Tamamla" butonuna bas.</div><div style="margin-top:8px"><button id="finish-chapter">Bölümü Tamamla</button></div>'; document.getElementById('next-task').classList.add('hidden'); document.getElementById('finish-chapter')?.addEventListener('click', finishChapter); return; }
+  const title = document.createElement('h3');
+  title.textContent = `Görev ${state.currentTaskIndex+1} — Zorluk: ${task.difficulty}`;
+  area.appendChild(title);
+  const p = document.createElement('div');
+  p.innerHTML = `<div style="font-weight:bold;margin:8px 0">${task.prompt}</div>`;
+  area.appendChild(p);
+
+  // render by type
+  if(task.type==='mc'){
+    const choices = document.createElement('div');
+    choices.className = 'choices';
+    task.options.forEach((opt,i)=>{
+      const btn = document.createElement('button');
+      btn.textContent = opt;
+      btn.addEventListener('click', ()=> evaluateMC(task,i,btn));
+      choices.appendChild(btn);
+    });
+    area.appendChild(choices);
+  } else if(task.type==='input'){
+    const inp = document.createElement('input');
+    inp.type='number';
+    inp.id='numeric-input';
+    area.appendChild(inp);
+    const sub = document.createElement('div'); sub.style.marginTop = '8px';
+    const btn = document.createElement('button'); btn.textContent='Cevabı Gönder';
+    btn.addEventListener('click', ()=> evaluateInput(task));
+    sub.appendChild(btn);
+    area.appendChild(sub);
+  } else if(task.type==='series'){
+    const inp = document.createElement('input'); inp.type='number'; inp.id='series-input';
+    inp.placeholder='Sayiyi gir';
+    area.appendChild(inp);
+    const btn = document.createElement('button'); btn.textContent='Gönder';
+    btn.style.marginTop='8px';
+    btn.addEventListener('click', ()=> evaluateSeries(task));
+    area.appendChild(btn);
+  } else if(task.type==='match'){
+    // simple match using select pairing
+    const pairs = task.pairs;
+    const mapping = task.mapping;
+    const wrapPairs = document.createElement('div');
+    pairs.forEach((pair,i)=>{
+      const row = document.createElement('div');
+      row.style.marginTop='6px';
+      const left = document.createElement('div'); left.textContent = `(${i+1}) ${pair[0]}`; left.style.fontWeight='bold';
+      const select = document.createElement('select'); select.id='match-'+i;
+      task.pairs.forEach((p,j)=>{
+        const opt = document.createElement('option'); opt.value=j; opt.textContent = `${j+1}: ${task.pairs[j][1]}`; select.appendChild(opt);
+      });
+      row.appendChild(left); row.appendChild(select);
+      wrapPairs.appendChild(row);
+    });
+    area.appendChild(wrapPairs);
+    const btn = document.createElement('button'); btn.textContent='Eşleştirmeyi Gönder'; btn.style.marginTop='8px';
+    btn.addEventListener('click', ()=> evaluateMatch(task));
+    area.appendChild(btn);
+  } else if(task.type==='logic'){
+    const choices = ['Evet','Hayır','Belirsiz'];
+    choices.forEach((c,i)=>{
+      const btn = document.createElement('button'); btn.textContent=c; btn.addEventListener('click', ()=> evaluateLogic(task,c));
+      area.appendChild(btn);
+    });
+  }
+
+  document.getElementById('next-task').classList.add('hidden');
+}
+
+function difficultyPoints(d){
+  if(d==='easy') return 10;
+  if(d==='medium') return 20;
+  return 30;
+}
+
+function correctFeedback(points){
+  alert('Doğru! +' + points + ' puan');
+}
+function wrongFeedback(hint){
+  alert('Yanlış. İpucu: ' + hint);
+}
+
+function evaluateMC(task,choiceBtnIndex,btn){
+  const chosenIndex = Array.from(btn.parentElement.children).indexOf(btn);
+  if(chosenIndex === task.answer){
+    const pts = difficultyPoints(task.difficulty);
+    state.score += pts;
+    correctFeedback(pts);
+    advanceTask();
+  } else {
+    wrongFeedback(task.hint || 'Tekrar dene.');
+  }
+  updateHUD();
+}
+
+function evaluateInput(task){
+  const val = document.getElementById('numeric-input').value;
+  if(val===''){ alert('Lütfen bir sayı gir.'); return; }
+  const num = Number(val);
+  if(num === task.answer){
+    const pts = difficultyPoints(task.difficulty);
+    state.score += pts;
+    correctFeedback(pts);
+    advanceTask();
+  } else {
+    wrongFeedback(task.hint || 'Yanlış cevap.');
+  }
+  updateHUD();
+}
+
+function evaluateSeries(task){
+  const num = Number(document.getElementById('series-input').value);
+  if(Number.isNaN(num)){ alert('Bir sayı gir.'); return; }
+  if(num === task.answer){
+    const pts = difficultyPoints(task.difficulty);
+    state.score += pts;
+    correctFeedback(pts);
+    advanceTask();
+  } else wrongFeedback(task.hint);
+  updateHUD();
+}
+
+function evaluateMatch(task){
+  let correct = true;
+  for(let i=0;i<task.pairs.length;i++){
+    const sel = document.getElementById('match-'+i);
+    const val = Number(sel.value);
+    if(val !== task.mapping[i]) { correct = false; break;}
+  }
+  if(correct){
+    const pts = difficultyPoints(task.difficulty);
+    state.score += pts;
+    correctFeedback(pts);
+    advanceTask();
+  } else wrongFeedback(task.hint);
+  updateHUD();
+}
+
+function evaluateLogic(task,choice){
+  if(choice === task.answer){
+    const pts = difficultyPoints(task.difficulty);
+    state.score += pts;
+    correctFeedback(pts);
+    advanceTask();
+  } else wrongFeedback(task.hint);
+  updateHUD();
+}
+
+function advanceTask(){
+  state.currentTaskIndex++;
+  updateProgressBar();
+  const ch = state.currentChapter;
+  if(state.currentTaskIndex >= ch.tasks.length){
+    // show complete message and finish button
+    renderTask();
+  } else {
+    renderTask();
+  }
+}
+
+document.getElementById('next-task').addEventListener('click', ()=>{
+  state.currentTaskIndex++;
+  renderTask();
+});
+
+function updateProgressBar(){
+  const ch = state.currentChapter;
+  if(!ch) return;
+  const total = ch.tasks.length;
+  const idx = Math.min(state.currentTaskIndex, total);
+  const pct = total===0?100:Math.round((idx/total)*100);
+  document.getElementById('progress-bar').style.width = pct+'%';
+  document.getElementById('chapter-progress-text').textContent = `${idx}/${total}`;
+}
+
+function finishChapter(){
+  // award badge
+  const ch = state.currentChapter;
+  const badgeName = ch.name + ' Ustası';
+  state.badges[ch.id] = badgeName;
+  state.completedChapters = Object.keys(state.badges).length;
+  alert(`${ch.name} bölümü tamamlandı! Rozet kazanıldı: ${badgeName}`);
+  renderBadges();
+  // go back to map
+  document.getElementById('chapter-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+  updateNode(ch);
+  saveState();
+  // if all chapters completed, enable final
+  if(state.completedChapters === chapters.length){
+    startFinalChallenge();
+  }
+}
+
+function startFinalChallenge(){
+  document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('final-screen').classList.remove('hidden');
+  renderFinal();
+}
+
+function renderFinal(){
+  const area = document.getElementById('final-area');
+  area.innerHTML = '';
+  const mixed = [];
+  // pick one question per chapter (first task of each)
+  chapters.forEach(ch=> { mixed.push({...ch.tasks[0], source:ch.name}); });
+  let index = 0;
+  let finalCorrect = 0;
+  function showNext(){
+    const task = mixed[index];
+    if(!task){ // finished
+      const bonus = finalCorrect === mixed.length ? 100 : finalCorrect*10;
+      state.score += bonus;
+      if(finalCorrect === mixed.length){
+        state.badges['grand'] = 'Matematik Üstadı';
+        alert('Tebrikler! Tüm final sorularını doğru yaptın — Matematik Üstadı rozeti kazandın! Bonus: ' + bonus + ' puan.');
+      } else {
+        alert(`Final tamamlandı. Doğru: ${finalCorrect}/${mixed.length}. Bonus: ${bonus} puan.`);
+      }
+      document.getElementById('final-screen').classList.add('hidden');
+      document.getElementById('result-screen').classList.remove('hidden');
+      renderResult();
+      updateHUD();
+      saveState();
+      return;
+    }
+    area.innerHTML = `<div style="font-weight:bold">${task.source} — ${task.prompt}</div>`;
+    if(task.type==='mc'){
+      task.options.forEach((opt,i)=>{
+        const b = document.createElement('button'); b.textContent=opt; b.style.display='block'; b.style.marginTop='6px';
+        b.addEventListener('click', ()=> { if(i===task.answer){ finalCorrect++; } index++; showNext(); });
+        area.appendChild(b);
+      });
+    } else if(task.type==='input' || task.type==='series'){
+      const inp = document.createElement('input'); inp.type='number'; inp.id='final-input';
+      area.appendChild(inp);
+      const btn = document.createElement('button'); btn.textContent='Gönder'; btn.style.marginTop='8px';
+      btn.addEventListener('click', ()=> {
+        const val = Number(document.getElementById('final-input').value);
+        if(val === task.answer) finalCorrect++;
+        index++; showNext();
+      });
+      area.appendChild(btn);
+    } else {
+      // fallback treat as MC wrong -> skip
+      index++; showNext();
+    }
+  }
+  showNext();
+}
+
+function renderResult(){
+  const el = document.getElementById('result-summary');
+  el.innerHTML = `<div><strong>Toplam Puan:</strong> ${state.score}</div>
+  <div><strong>Alınan Rozetler:</strong> ${Object.values(state.badges).join(', ')}</div>
+  <div style="margin-top:8px"><button id="replay">Tekrar Oyna</button></div>`;
+  document.getElementById('replay').addEventListener('click', ()=> location.reload());
+}
+
+function updateHUD(){
+  document.getElementById('score').textContent = 'Puan: ' + state.score;
+  // level by score thresholds
+  const lvl = Math.floor(state.score/100)+1;
+  state.level = lvl;
+  document.getElementById('level').textContent = 'Seviye: ' + state.level;
+}
+
+/* Daily task logic */
+document.getElementById('daily-btn').addEventListener('click', ()=> {
+  const last = localStorage.getItem('lastDaily');
+  const today = new Date().toDateString();
+  if(last === today){ alert('Bugünkü günlük görev zaten yapıldı.'); return; }
+  // simple bonus question
+  const ans = prompt('Günlük Bonus: Fibonacci dizisinin 7. terimi kaçtır? (1,1,2,3,5,8,...)');
+  if(ans !== null && Number(ans) === 13){
+    state.score += 15;
+    alert('Doğru! +15 puan.');
+    localStorage.setItem('lastDaily', today);
+    updateHUD();
+    saveState();
+  } else alert('Yanlış veya iptal edildi. Doğru cevap 13\'tür.');
+});
+
+/* Leaderboard (localStorage) */
+function saveScoreToLeaderboard(name, score){
+  const data = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+  data.push({name:name,score:score,date:new Date().toLocaleString()});
+  data.sort((a,b)=>b.score-a.score);
+  localStorage.setItem('leaderboard', JSON.stringify(data.slice(0,50)));
+}
+document.getElementById('save-score').addEventListener('click', ()=>{
+  const name = document.getElementById('player-name').value || 'Anonim';
+  saveScoreToLeaderboard(name, state.score);
+  alert('Skor kaydedildi!');
+  showLeaderboard();
+});
+
+document.getElementById('show-leaderboard').addEventListener('click', showLeaderboard);
+function showLeaderboard(){
+  document.getElementById('main-screen').classList.add('hidden');
+  document.getElementById('leaderboard-screen').classList.remove('hidden');
+  const list = JSON.parse(localStorage.getItem('leaderboard') || '[]');
+  const wrap = document.getElementById('leaderboard-list');
+  wrap.innerHTML = '';
+  if(list.length===0) wrap.innerHTML = '<div>Henüz skor yok.</div>';
+  list.forEach((row,i)=>{
+    const r = document.createElement('div'); r.style.padding='8px'; r.style.borderBottom='1px solid #eee';
+    r.innerHTML = `<strong>#${i+1} ${row.name}</strong> — ${row.score} puan <div style="font-size:12px;color:#666">${row.date}</div>`;
+    wrap.appendChild(r);
+  });
+}
+document.getElementById('close-leaderboard').addEventListener('click', ()=>{
+  document.getElementById('leaderboard-screen').classList.add('hidden');
+  document.getElementById('main-screen').classList.remove('hidden');
+});
+
+/* save/load state */
+function saveState(){
+  localStorage.setItem('mathgame_state', JSON.stringify(state));
+  localStorage.setItem('mathgame_badges', JSON.stringify(state.badges));
+  localStorage.setItem('mathgame_score', state.score);
+}
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem('mathgame_state'));
+    if(s){ state = s; state.badges = JSON.parse(localStorage.getItem('mathgame_badges') || '{}'); state.score = Number(localStorage.getItem('mathgame_score') || state.score); }
+  }catch(e){}
+  updateHUD();
+  // update nodes badges
+  chapters.forEach(updateNode);
+}
+loadState();
+
+/* If all chapters already done on load, show final */
+if(state.completedChapters === chapters.length && !state.badges['grand']){
+  // allow final
+  // show a prompt to start final
+  if(confirm('Tüm bölümler daha önce tamamlanmış. Final Mücadelesini başlatmak ister misin?')) startFinalChallenge();
+}
+
+// small helper: when finishing chapter from rendering (finish button)
+document.addEventListener('click', function(e){
+  if(e.target && e.target.id === 'finish-chapter') finishChapter();
+});
+
+// initial HUD update
+updateHUD();
+
+</script>
+</body>
+</html>
