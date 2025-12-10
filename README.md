@@ -1,1 +1,1 @@
-# Matemati-in-Alt-Bilgesi
+# Matematikin-Alt-Bilgesi
